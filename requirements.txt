@@ -1,0 +1,6 @@
+neo4j==1.7.6
+fastapi
+uvicorn
+python-multipart
+wikipedia-api
+python-dotenv
