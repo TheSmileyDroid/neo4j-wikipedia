@@ -84,7 +84,7 @@ if __name__ == "__main__":
         # You can change these starting pages to explore different topics
         start_pages = ["Graph database", "Neo4j", "World Wide Web"]
 
-        populate_database(driver, start_pages, max_depth=2)
+        populate_database(driver, start_pages, max_depth=3)
 
         print("\nPopulation complete!")
 
