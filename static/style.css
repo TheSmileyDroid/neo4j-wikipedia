@@ -57,3 +57,62 @@ button:hover {
     background: #fafbfc;
     border-radius: 6px;
 }
+
+/* Estilos para as consultas demonstrativas */
+.card {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.list-group-item {
+    border-left: none;
+    border-right: none;
+}
+
+.list-group-item:first-child {
+    border-top: none;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.btn-outline-primary {
+    border-color: #007bff;
+    color: #007bff;
+}
+
+.btn-outline-primary:hover {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.alert {
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0.375rem;
+}
+
+.table-responsive {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.small {
+    font-size: 0.875em;
+}
+
+#custom-query-input {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9em;
+}

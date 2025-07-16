@@ -1,4 +1,3 @@
-
 import os
 from flask import Flask, render_template, request, jsonify, abort
 from neo4j import GraphDatabase
@@ -136,6 +135,183 @@ def shortest_path():
     for rel in result["rs"]:
         edges.append({"from": rel.start_node.id, "to": rel.end_node.id})
     return jsonify({"nodes": nodes, "edges": edges})
+
+# --- Demo Queries Endpoints ---
+@app.route("/query/page_details")
+def get_page_details():
+    if not driver:
+        abort(503, description="Database connection not available")
+    title = request.args.get("title", "")
+    if not title:
+        abort(400, description="Missing 'title' parameter")
+
+    query = """
+    MATCH (p:Page {title: $title})
+    RETURN p.title, p.summary, p.url
+    """
+    with driver.session() as session:  # type: ignore
+        result = session.run(query, title=title).single()
+    if not result:
+        abort(404, description="Page not found")
+    return jsonify({
+        "title": result["p.title"],
+        "summary": result["p.summary"],
+        "url": result["p.url"]
+    })
+
+@app.route("/query/links_from_page")
+def get_links_from_page():
+    if not driver:
+        abort(503, description="Database connection not available")
+    title = request.args.get("title", "")
+    limit = int(request.args.get("limit", 20))
+    if not title:
+        abort(400, description="Missing 'title' parameter")
+
+    query = """
+    MATCH (p:Page {title: $title})-[:LINKS_TO]->(linkedPage)
+    RETURN linkedPage.title
+    LIMIT $limit
+    """
+    with driver.session() as session:  # type: ignore
+        result = session.run(query, title=title, limit=limit)
+        return jsonify([{"title": record["linkedPage.title"]} for record in result])
+
+@app.route("/query/most_referenced")
+def get_most_referenced():
+    if not driver:
+        abort(503, description="Database connection not available")
+    limit = int(request.args.get("limit", 10))
+
+    query = """
+    MATCH (p:Page)
+    WHERE (p)<-[:LINKS_TO]-()
+    RETURN p.title, size((p)<-[:LINKS_TO]-()) AS incoming_links
+    ORDER BY incoming_links DESC
+    LIMIT $limit
+    """
+    with driver.session() as session:  # type: ignore
+        result = session.run(query, limit=limit)
+        return jsonify([{
+            "title": record["p.title"],
+            "incoming_links": record["incoming_links"]
+        } for record in result])
+
+@app.route("/query/hub_pages")
+def get_hub_pages():
+    if not driver:
+        abort(503, description="Database connection not available")
+    limit = int(request.args.get("limit", 10))
+
+    query = """
+    MATCH (p:Page)
+    WHERE (p)-[:LINKS_TO]->()
+    RETURN p.title, size((p)-[:LINKS_TO]->()) AS outgoing_links
+    ORDER BY outgoing_links DESC
+    LIMIT $limit
+    """
+    with driver.session() as session:  # type: ignore
+        result = session.run(query, limit=limit)
+        return jsonify([{
+            "title": record["p.title"],
+            "outgoing_links": record["outgoing_links"]
+        } for record in result])
+
+@app.route("/query/mutual_links")
+def get_mutual_links():
+    if not driver:
+        abort(503, description="Database connection not available")
+    limit = int(request.args.get("limit", 20))
+
+    query = """
+    MATCH (p1:Page)-[:LINKS_TO]->(p2:Page)
+    WHERE (p2)-[:LINKS_TO]->(p1)
+    RETURN p1.title, p2.title
+    LIMIT $limit
+    """
+    with driver.session() as session:  # type: ignore
+        result = session.run(query, limit=limit)
+        return jsonify([{
+            "page1": record["p1.title"],
+            "page2": record["p2.title"]
+        } for record in result])
+
+@app.route("/query/triangles")
+def get_triangles():
+    if not driver:
+        abort(503, description="Database connection not available")
+    limit = int(request.args.get("limit", 10))
+
+    query = """
+    MATCH (a:Page)-[:LINKS_TO]->(b:Page)-[:LINKS_TO]->(c:Page)-[:LINKS_TO]->(a)
+    RETURN a.title, b.title, c.title
+    LIMIT $limit
+    """
+    with driver.session() as session:  # type: ignore
+        result = session.run(query, limit=limit)
+        return jsonify([{
+            "page_a": record["a.title"],
+            "page_b": record["b.title"],
+            "page_c": record["c.title"]
+        } for record in result])
+
+@app.route("/query/neighborhood")
+def get_neighborhood():
+    if not driver:
+        abort(503, description="Database connection not available")
+    title = request.args.get("title", "")
+    hops = int(request.args.get("hops", 2))
+    limit = int(request.args.get("limit", 50))
+    if not title:
+        abort(400, description="Missing 'title' parameter")
+
+    query = f"""
+    MATCH (start:Page {{title: $title}})-[:LINKS_TO*1..{hops}]->(neighbor)
+    RETURN DISTINCT neighbor.title
+    LIMIT $limit
+    """
+    with driver.session() as session:  # type: ignore
+        result = session.run(query, title=title, limit=limit)
+        return jsonify([{"title": record["neighbor.title"]} for record in result])
+
+@app.route("/query/database_no_sql")
+def get_database_no_sql():
+    if not driver:
+        abort(503, description="Database connection not available")
+    limit = int(request.args.get("limit", 20))
+
+    query = """
+    MATCH (db:Page)
+    WHERE db.title CONTAINS "database" AND NOT (db)-[:LINKS_TO]->(:Page {title: "SQL"})
+    RETURN db.title
+    LIMIT $limit
+    """
+    with driver.session() as session:  # type: ignore
+        result = session.run(query, limit=limit)
+        return jsonify([{"title": record["db.title"]} for record in result])
+
+@app.route("/query/execute_custom")
+def execute_custom_query():
+    if not driver:
+        abort(503, description="Database connection not available")
+    cypher = request.args.get("cypher", "")
+    if not cypher:
+        abort(400, description="Missing 'cypher' parameter")
+
+    # Basic security check - only allow READ operations
+    cypher_upper = cypher.upper().strip()
+    if not cypher_upper.startswith(('MATCH', 'WITH', 'RETURN', 'OPTIONAL')):
+        abort(400, description="Only read-only queries are allowed")
+
+    try:
+        with driver.session() as session:  # type: ignore
+            result = session.run(cypher)
+            records = []
+            for record in result:
+                records.append(dict(record))
+            return jsonify({"records": records})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 if __name__ == '__main__':
         app.run(debug=True) # Use app.run() for development

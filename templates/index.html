@@ -67,6 +67,128 @@
             </div>
         </div>
 
+        <!-- Consultas Demonstrativas -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Consultas Demonstrativas</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Páginas mais referenciadas -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">Páginas Mais Referenciadas</h6>
+                            </div>
+                            <div class="card-body">
+                                <button class="btn btn-outline-primary mb-2" onclick="runDemoQuery('most_referenced')">
+                                    Executar Consulta
+                                </button>
+                                <div id="most-referenced-results"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Páginas "Hub" -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">Páginas "Hub" (Mais Links Saindo)</h6>
+                            </div>
+                            <div class="card-body">
+                                <button class="btn btn-outline-primary mb-2" onclick="runDemoQuery('hub_pages')">
+                                    Executar Consulta
+                                </button>
+                                <div id="hub-pages-results"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Links mútuos -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">Páginas com Links Mútuos</h6>
+                            </div>
+                            <div class="card-body">
+                                <button class="btn btn-outline-primary mb-2" onclick="runDemoQuery('mutual_links')">
+                                    Executar Consulta
+                                </button>
+                                <div id="mutual-links-results"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Padrões triangulares -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">Padrões Triangulares</h6>
+                            </div>
+                            <div class="card-body">
+                                <button class="btn btn-outline-primary mb-2" onclick="runDemoQuery('triangles')">
+                                    Executar Consulta
+                                </button>
+                                <div id="triangles-results"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vizinhança de uma página -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">Vizinhança de Página</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control" id="neighborhood-input" placeholder="Nome da página...">
+                                    <input type="number" class="form-control" id="hops-input" placeholder="Hops" value="2" min="1" max="3">
+                                    <button class="btn btn-outline-primary" onclick="runNeighborhoodQuery()">
+                                        Buscar
+                                    </button>
+                                </div>
+                                <div id="neighborhood-results"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Databases sem SQL -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">Databases que não linkam para SQL</h6>
+                            </div>
+                            <div class="card-body">
+                                <button class="btn btn-outline-primary mb-2" onclick="runDemoQuery('database_no_sql')">
+                                    Executar Consulta
+                                </button>
+                                <div id="database-no-sql-results"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Consulta personalizada -->
+                <div class="mt-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">Executar Consulta Cypher Personalizada</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <textarea class="form-control" id="custom-query-input" rows="4" placeholder="MATCH (p:Page) RETURN p.title LIMIT 10"></textarea>
+                            </div>
+                            <button class="btn btn-warning" onclick="runCustomQuery()">
+                                Executar Consulta Personalizada
+                            </button>
+                            <div id="custom-query-results" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Resultados da busca -->
         <div id="results" class="mb-4"></div>
 
@@ -143,6 +265,167 @@
         };
         new vis.Network(container, data, options);
     };
+
+    // Demo queries functions
+    async function runDemoQuery(queryType) {
+        const resultDiv = document.getElementById(`${queryType.replace('_', '-')}-results`);
+        try {
+            const res = await fetch(`/query/${queryType}?limit=10`);
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+            const data = await res.json();
+            displayQueryResults(data, resultDiv, queryType);
+        } catch (error) {
+            resultDiv.innerHTML = `<div class="alert alert-danger">Erro: ${error.message}</div>`;
+        }
+    }
+
+    async function runNeighborhoodQuery() {
+        const title = document.getElementById('neighborhood-input').value;
+        const hops = document.getElementById('hops-input').value || 2;
+        const resultDiv = document.getElementById('neighborhood-results');
+
+        if (!title) {
+            resultDiv.innerHTML = '<div class="alert alert-warning">Por favor, insira o nome de uma página</div>';
+            return;
+        }
+
+        try {
+            const res = await fetch(`/query/neighborhood?title=${encodeURIComponent(title)}&hops=${hops}&limit=20`);
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+            const data = await res.json();
+            displayQueryResults(data, resultDiv, 'neighborhood');
+        } catch (error) {
+            resultDiv.innerHTML = `<div class="alert alert-danger">Erro: ${error.message}</div>`;
+        }
+    }
+
+    async function runCustomQuery() {
+        const cypher = document.getElementById('custom-query-input').value;
+        const resultDiv = document.getElementById('custom-query-results');
+
+        if (!cypher) {
+            resultDiv.innerHTML = '<div class="alert alert-warning">Por favor, insira uma consulta Cypher</div>';
+            return;
+        }
+
+        try {
+            const res = await fetch(`/query/execute_custom?cypher=${encodeURIComponent(cypher)}`);
+            const data = await res.json();
+
+            if (!res.ok || data.error) {
+                throw new Error(data.error || `HTTP ${res.status}`);
+            }
+
+            displayCustomQueryResults(data, resultDiv);
+        } catch (error) {
+            resultDiv.innerHTML = `<div class="alert alert-danger">Erro: ${error.message}</div>`;
+        }
+    }
+
+    function displayQueryResults(data, container, queryType) {
+        if (!data || data.length === 0) {
+            container.innerHTML = '<div class="alert alert-info">Nenhum resultado encontrado</div>';
+            return;
+        }
+
+        let html = '<div class="mt-2">';
+
+        switch (queryType) {
+            case 'most_referenced':
+                html += '<small class="text-muted">Top páginas por links recebidos:</small><ul class="list-group list-group-flush mt-1">';
+                data.forEach(item => {
+                    html += `<li class="list-group-item d-flex justify-content-between align-items-center py-1">
+                        <span class="small">${item.title}</span>
+                        <span class="badge bg-primary rounded-pill">${item.incoming_links}</span>
+                    </li>`;
+                });
+                html += '</ul>';
+                break;
+
+            case 'hub_pages':
+                html += '<small class="text-muted">Top páginas por links enviados:</small><ul class="list-group list-group-flush mt-1">';
+                data.forEach(item => {
+                    html += `<li class="list-group-item d-flex justify-content-between align-items-center py-1">
+                        <span class="small">${item.title}</span>
+                        <span class="badge bg-success rounded-pill">${item.outgoing_links}</span>
+                    </li>`;
+                });
+                html += '</ul>';
+                break;
+
+            case 'mutual_links':
+                html += '<small class="text-muted">Páginas com links mútuos:</small><ul class="list-group list-group-flush mt-1">';
+                data.forEach(item => {
+                    html += `<li class="list-group-item py-1">
+                        <div class="small"><strong>${item.page1}</strong> ↔ <strong>${item.page2}</strong></div>
+                    </li>`;
+                });
+                html += '</ul>';
+                break;
+
+            case 'triangles':
+                html += '<small class="text-muted">Padrões triangulares encontrados:</small><ul class="list-group list-group-flush mt-1">';
+                data.forEach(item => {
+                    html += `<li class="list-group-item py-1">
+                        <div class="small"><strong>${item.page_a}</strong> → <strong>${item.page_b}</strong> → <strong>${item.page_c}</strong> → <strong>${item.page_a}</strong></div>
+                    </li>`;
+                });
+                html += '</ul>';
+                break;
+
+            case 'neighborhood':
+            case 'database_no_sql':
+                html += '<small class="text-muted">Páginas encontradas:</small><ul class="list-group list-group-flush mt-1">';
+                data.forEach(item => {
+                    html += `<li class="list-group-item py-1">
+                        <a href="#" class="small text-decoration-none" onclick="loadGraph('${item.title.replace(/'/g, "\\'")}')">${item.title}</a>
+                    </li>`;
+                });
+                html += '</ul>';
+                break;
+        }
+
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    function displayCustomQueryResults(data, container) {
+        if (!data.records || data.records.length === 0) {
+            container.innerHTML = '<div class="alert alert-info">Nenhum resultado encontrado</div>';
+            return;
+        }
+
+        let html = '<div class="mt-2"><small class="text-muted">Resultados da consulta personalizada:</small>';
+        html += '<div class="table-responsive mt-2"><table class="table table-sm table-striped">';
+
+        // Header
+        const firstRecord = data.records[0];
+        if (firstRecord) {
+            html += '<thead><tr>';
+            Object.keys(firstRecord).forEach(key => {
+                html += `<th class="small">${key}</th>`;
+            });
+            html += '</tr></thead>';
+        }
+
+        // Rows
+        html += '<tbody>';
+        data.records.forEach(record => {
+            html += '<tr>';
+            Object.values(record).forEach(value => {
+                const displayValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+                html += `<td class="small">${displayValue}</td>`;
+            });
+            html += '</tr>';
+        });
+        html += '</tbody></table></div></div>';
+
+        container.innerHTML = html;
+    }
     </script>
 </body>
 </html>
