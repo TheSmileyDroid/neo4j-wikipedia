@@ -6,9 +6,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Configuration ---
-ONGDB_URI = os.environ.get("ONGDB_URI", "bolt://localhost:7687")
-ONGDB_USER = os.environ.get("ONGDB_USER", "ongdb")
-ONGDB_PASSWORD = os.environ.get("ONGDB_PASSWORD", "password")
+NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
+NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "password")
 # --- End Configuration ---
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -18,9 +18,9 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 
 try:
-    driver = GraphDatabase.driver(ONGDB_URI, auth=(ONGDB_USER, ONGDB_PASSWORD))
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 except Exception as e:
-    print(f"Failed to connect to OngDB: {e}")
+    print(f"Failed to connect to NEO4J: {e}")
     driver = None
 
 @app.route("/")

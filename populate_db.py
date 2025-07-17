@@ -8,11 +8,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Configuration ---
-ONGDB_URI = os.environ.get("ONGDB_URI", "bolt://localhost:7687")
-ONGDB_USER = os.environ.get("ONGDB_USER", "ongdb")
-ONGDB_PASSWORD = os.environ.get("ONGDB_PASSWORD", "password")
+NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
+NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "password")
 WIKI_LANGUAGE = "pt"
-WIKI_USER_AGENT = "OngDB-Wikipedia-Visualizer/1.0 (https://github.com/TheSmileyDroid)"
+WIKI_USER_AGENT = "NEO4J-Wikipedia-Visualizer/1.0 (https://github.com/TheSmileyDroid)"
 # --- End Configuration ---
 
 def create_constraints(driver):
@@ -20,12 +20,12 @@ def create_constraints(driver):
     Ensures the database has the correct constraints for efficient operation.
     """
     with driver.session() as session:
-        session.run("CREATE CONSTRAINT ON (p:Page) ASSERT p.title IS UNIQUE")
+        session.run("CREATE CONSTRAINT FOR (p:Page) REQUIRE p.title IS UNIQUE")
     print("Constraint on :Page(title) created.")
 
 def populate_database(driver, start_pages, max_depth=2):
     """
-    Crawls Wikipedia from a set of start pages and populates the OngDB database.
+    Crawls Wikipedia from a set of start pages and populates the NEO4J database.
     """
     wiki_api = wikipediaapi.Wikipedia(WIKI_LANGUAGE, headers={"User-Agent": WIKI_USER_AGENT})
 
@@ -77,7 +77,7 @@ def populate_database(driver, start_pages, max_depth=2):
 
 if __name__ == "__main__":
     try:
-        driver = GraphDatabase.driver(ONGDB_URI, auth=(ONGDB_USER, ONGDB_PASSWORD))
+        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
         create_constraints(driver)
 
