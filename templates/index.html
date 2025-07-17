@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- vis-network for graph visualization -->
     <link href="https://unpkg.com/vis-network/styles/vis-network.min.css" rel="stylesheet" type="text/css" />
     <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
@@ -160,10 +162,10 @@
                                 <h6 class="card-title mb-0">Databases que não linkam para SQL</h6>
                             </div>
                             <div class="card-body">
-                                <button class="btn btn-outline-primary mb-2" onclick="runDemoQuery('database_no_sql')">
+                                <button class="btn btn-outline-primary mb-2" onclick="runDemoQuery('database_nosql')">
                                     Executar Consulta
                                 </button>
-                                <div id="database-no-sql-results"></div>
+                                <div id="database-nosql-results"></div>
                             </div>
                         </div>
                     </div>
@@ -211,7 +213,12 @@
         const data = await res.json();
         let html = '<div class="list-group">';
         data.forEach(item => {
-            html += `<a href="#" class="list-group-item list-group-item-action" onclick="loadGraph('${item.title.replace(/'/g, "\\'")}')">${item.title}</a>`;
+            html += `<div class="list-group-item d-flex justify-content-between align-items-center">
+                <a href="#" class="text-decoration-none" onclick="loadGraph('${item.title.replace(/'/g, "\\'")}')">${item.title}</a>
+                ${item.url ? `<a href="${item.url}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-wikipedia"></i> Wikipedia
+                </a>` : ''}
+            </div>`;
         });
         html += '</div>';
         document.getElementById('results').innerHTML = html;
@@ -339,7 +346,10 @@
                 html += '<small class="text-muted">Top páginas por links recebidos:</small><ul class="list-group list-group-flush mt-1">';
                 data.forEach(item => {
                     html += `<li class="list-group-item d-flex justify-content-between align-items-center py-1">
-                        <span class="small">${item.title}</span>
+                        <div class="d-flex align-items-center">
+                            <span class="small me-2">${item.title}</span>
+                            ${item.url ? `<a href="${item.url}" target="_blank" class="btn btn-xs btn-outline-primary btn-sm me-2">Wiki</a>` : ''}
+                        </div>
                         <span class="badge bg-primary rounded-pill">${item.incoming_links}</span>
                     </li>`;
                 });
@@ -350,7 +360,10 @@
                 html += '<small class="text-muted">Top páginas por links enviados:</small><ul class="list-group list-group-flush mt-1">';
                 data.forEach(item => {
                     html += `<li class="list-group-item d-flex justify-content-between align-items-center py-1">
-                        <span class="small">${item.title}</span>
+                        <div class="d-flex align-items-center">
+                            <span class="small me-2">${item.title}</span>
+                            ${item.url ? `<a href="${item.url}" target="_blank" class="btn btn-xs btn-outline-primary btn-sm me-2">Wiki</a>` : ''}
+                        </div>
                         <span class="badge bg-success rounded-pill">${item.outgoing_links}</span>
                     </li>`;
                 });
@@ -361,7 +374,15 @@
                 html += '<small class="text-muted">Páginas com links mútuos:</small><ul class="list-group list-group-flush mt-1">';
                 data.forEach(item => {
                     html += `<li class="list-group-item py-1">
-                        <div class="small"><strong>${item.page1}</strong> ↔ <strong>${item.page2}</strong></div>
+                        <div class="small d-flex align-items-center justify-content-between">
+                            <div>
+                                <strong>${item.page1}</strong> ↔ <strong>${item.page2}</strong>
+                            </div>
+                            <div>
+                                ${item.page1_url ? `<a href="${item.page1_url}" target="_blank" class="btn btn-xs btn-outline-primary btn-sm me-1">Wiki 1</a>` : ''}
+                                ${item.page2_url ? `<a href="${item.page2_url}" target="_blank" class="btn btn-xs btn-outline-primary btn-sm">Wiki 2</a>` : ''}
+                            </div>
+                        </div>
                     </li>`;
                 });
                 html += '</ul>';
@@ -371,18 +392,28 @@
                 html += '<small class="text-muted">Padrões triangulares encontrados:</small><ul class="list-group list-group-flush mt-1">';
                 data.forEach(item => {
                     html += `<li class="list-group-item py-1">
-                        <div class="small"><strong>${item.page_a}</strong> → <strong>${item.page_b}</strong> → <strong>${item.page_c}</strong> → <strong>${item.page_a}</strong></div>
+                        <div class="small">
+                            <div class="mb-1">
+                                <strong>${item.page_a}</strong> → <strong>${item.page_b}</strong> → <strong>${item.page_c}</strong> → <strong>${item.page_a}</strong>
+                            </div>
+                            <div class="d-flex gap-1">
+                                ${item.page_a_url ? `<a href="${item.page_a_url}" target="_blank" class="btn btn-xs btn-outline-primary btn-sm">A</a>` : ''}
+                                ${item.page_b_url ? `<a href="${item.page_b_url}" target="_blank" class="btn btn-xs btn-outline-primary btn-sm">B</a>` : ''}
+                                ${item.page_c_url ? `<a href="${item.page_c_url}" target="_blank" class="btn btn-xs btn-outline-primary btn-sm">C</a>` : ''}
+                            </div>
+                        </div>
                     </li>`;
                 });
                 html += '</ul>';
                 break;
 
             case 'neighborhood':
-            case 'database_no_sql':
+            case 'database_nosql':
                 html += '<small class="text-muted">Páginas encontradas:</small><ul class="list-group list-group-flush mt-1">';
                 data.forEach(item => {
-                    html += `<li class="list-group-item py-1">
+                    html += `<li class="list-group-item py-1 d-flex justify-content-between align-items-center">
                         <a href="#" class="small text-decoration-none" onclick="loadGraph('${item.title.replace(/'/g, "\\'")}')">${item.title}</a>
+                        ${item.url ? `<a href="${item.url}" target="_blank" class="btn btn-xs btn-outline-primary btn-sm">Wiki</a>` : ''}
                     </li>`;
                 });
                 html += '</ul>';

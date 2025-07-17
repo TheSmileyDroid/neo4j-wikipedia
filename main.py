@@ -34,14 +34,14 @@ def search_pages():
     q = request.args.get("q", "")
     query = """
     MATCH (p:Page)
-    WHERE p.title CONTAINS $query
-    RETURN p.title as title
-    ORDER BY length(p.title) ASC
+    WHERE p.title CONTAINS $q
+    RETURN p.title as title, p.url as url
+    ORDER BY size(p.title) ASC
     LIMIT 10
     """
     with driver.session() as session: # type: ignore outdated types
-        result = session.run(query, query=q)
-        return jsonify([{"title": record["title"]} for record in result])
+        result = session.run(query, q=q)
+        return jsonify([{"title": record["title"], "url": record["url"]} for record in result])
 
 @app.route("/graph")
 def get_graph_data():
@@ -184,9 +184,8 @@ def get_most_referenced():
     limit = int(request.args.get("limit", 10))
 
     query = """
-    MATCH (p:Page)
-    WHERE (p)<-[:LINKS_TO]-()
-    RETURN p.title, size((p)<-[:LINKS_TO]-()) AS incoming_links
+    MATCH (p:Page)<-[:LINKS_TO]-()
+    RETURN p.title, p.url, count(*) AS incoming_links
     ORDER BY incoming_links DESC
     LIMIT $limit
     """
@@ -194,6 +193,7 @@ def get_most_referenced():
         result = session.run(query, limit=limit)
         return jsonify([{
             "title": record["p.title"],
+            "url": record["p.url"],
             "incoming_links": record["incoming_links"]
         } for record in result])
 
@@ -204,9 +204,8 @@ def get_hub_pages():
     limit = int(request.args.get("limit", 10))
 
     query = """
-    MATCH (p:Page)
-    WHERE (p)-[:LINKS_TO]->()
-    RETURN p.title, size((p)-[:LINKS_TO]->()) AS outgoing_links
+    MATCH (p:Page)-[:LINKS_TO]->()
+    RETURN p.title, p.url, count(*) AS outgoing_links
     ORDER BY outgoing_links DESC
     LIMIT $limit
     """
@@ -214,6 +213,7 @@ def get_hub_pages():
         result = session.run(query, limit=limit)
         return jsonify([{
             "title": record["p.title"],
+            "url": record["p.url"],
             "outgoing_links": record["outgoing_links"]
         } for record in result])
 
@@ -226,14 +226,16 @@ def get_mutual_links():
     query = """
     MATCH (p1:Page)-[:LINKS_TO]->(p2:Page)
     WHERE (p2)-[:LINKS_TO]->(p1)
-    RETURN p1.title, p2.title
+    RETURN p1.title, p1.url, p2.title, p2.url
     LIMIT $limit
     """
     with driver.session() as session:  # type: ignore
         result = session.run(query, limit=limit)
         return jsonify([{
             "page1": record["p1.title"],
-            "page2": record["p2.title"]
+            "page1_url": record["p1.url"],
+            "page2": record["p2.title"],
+            "page2_url": record["p2.url"]
         } for record in result])
 
 @app.route("/query/triangles")
@@ -244,15 +246,18 @@ def get_triangles():
 
     query = """
     MATCH (a:Page)-[:LINKS_TO]->(b:Page)-[:LINKS_TO]->(c:Page)-[:LINKS_TO]->(a)
-    RETURN a.title, b.title, c.title
+    RETURN a.title, a.url, b.title, b.url, c.title, c.url
     LIMIT $limit
     """
     with driver.session() as session:  # type: ignore
         result = session.run(query, limit=limit)
         return jsonify([{
             "page_a": record["a.title"],
+            "page_a_url": record["a.url"],
             "page_b": record["b.title"],
-            "page_c": record["c.title"]
+            "page_b_url": record["b.url"],
+            "page_c": record["c.title"],
+            "page_c_url": record["c.url"]
         } for record in result])
 
 @app.route("/query/neighborhood")
@@ -267,28 +272,28 @@ def get_neighborhood():
 
     query = f"""
     MATCH (start:Page {{title: $title}})-[:LINKS_TO*1..{hops}]->(neighbor)
-    RETURN DISTINCT neighbor.title
+    RETURN DISTINCT neighbor.title, neighbor.url
     LIMIT $limit
     """
     with driver.session() as session:  # type: ignore
-        result = session.run(query, title=title, limit=limit)
-        return jsonify([{"title": record["neighbor.title"]} for record in result])
+        result = session.run(query, title=title, limit=limit) # type: ignore
+        return jsonify([{"title": record["neighbor.title"], "url": record["neighbor.url"]} for record in result])
 
-@app.route("/query/database_no_sql")
-def get_database_no_sql():
+@app.route("/query/database_nosql")
+def get_database_nosql():
     if not driver:
         abort(503, description="Database connection not available")
     limit = int(request.args.get("limit", 20))
 
     query = """
     MATCH (db:Page)
-    WHERE db.title CONTAINS "database" AND NOT (db)-[:LINKS_TO]->(:Page {title: "SQL"})
-    RETURN db.title
+    WHERE db.title CONTAINS "database" AND NOT (db)-[:LINKS_TO]->(:Page {title: "SQL"}) AND db.url IS NOT NULL
+    RETURN db.title, db.url
     LIMIT $limit
     """
     with driver.session() as session:  # type: ignore
         result = session.run(query, limit=limit)
-        return jsonify([{"title": record["db.title"]} for record in result])
+        return jsonify([{"title": record["db.title"], "url": record["db.url"]} for record in result])
 
 @app.route("/query/execute_custom")
 def execute_custom_query():
