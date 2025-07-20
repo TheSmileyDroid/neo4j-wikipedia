@@ -61,8 +61,8 @@ def get_graph_data():
 
     query = """
     MATCH (p:Page {title: $page_title})
-    OPTIONAL MATCH (p)-[r:LINKS_TO]->(outgoing)
-    OPTIONAL MATCH (incoming)-[s:LINKS_TO]->(p)
+    OPTIONAL MATCH (p)-[r:LINKS_TO|ALIAS]->(outgoing)
+    OPTIONAL MATCH (incoming)-[s:LINKS_TO|ALIAS]->(p)
     WITH p, collect(DISTINCT outgoing)[..$outgoing_limit] as outgoing_links, collect(DISTINCT incoming)[..$incoming_limit] as incoming_links
     RETURN p, outgoing_links, incoming_links
     """
@@ -112,13 +112,13 @@ def shortest_path():
     if undirected:
         query = """
         MATCH (start:Page {title: $source}), (end:Page {title: $target})
-        MATCH path = shortestPath((start)-[:LINKS_TO*..10]-(end))
+        MATCH path = shortestPath((start)-[:LINKS_TO|ALIAS*..30]-(end))
         RETURN nodes(path) as ns, relationships(path) as rs
         """
     else:
         query = """
         MATCH (start:Page {title: $source}), (end:Page {title: $target})
-        MATCH path = shortestPath((start)-[:LINKS_TO*..10]->(end))
+        MATCH path = shortestPath((start)-[:LINKS_TO|ALIAS*..30]->(end))
         RETURN nodes(path) as ns, relationships(path) as rs
         """
     with driver.session() as session:  # type: ignore
@@ -169,7 +169,7 @@ def get_links_from_page():
         abort(400, description="Missing 'title' parameter")
 
     query = """
-    MATCH (p:Page {title: $title})-[:LINKS_TO]->(linkedPage)
+    MATCH (p:Page {title: $title})-[:LINKS_TO|ALIAS]->(linkedPage)
     RETURN linkedPage.title
     LIMIT $limit
     """
@@ -184,7 +184,7 @@ def get_most_referenced():
     limit = int(request.args.get("limit", 10))
 
     query = """
-    MATCH (p:Page)<-[:LINKS_TO]-()
+    MATCH (p:Page)<-[:LINKS_TO|ALIAS]-()
     RETURN p.title, p.url, count(*) AS incoming_links
     ORDER BY incoming_links DESC
     LIMIT $limit
@@ -204,7 +204,7 @@ def get_hub_pages():
     limit = int(request.args.get("limit", 10))
 
     query = """
-    MATCH (p:Page)-[:LINKS_TO]->()
+    MATCH (p:Page)-[:LINKS_TO|ALIAS]->()
     RETURN p.title, p.url, count(*) AS outgoing_links
     ORDER BY outgoing_links DESC
     LIMIT $limit
@@ -224,8 +224,8 @@ def get_mutual_links():
     limit = int(request.args.get("limit", 20))
 
     query = """
-    MATCH (p1:Page)-[:LINKS_TO]->(p2:Page)
-    WHERE (p2)-[:LINKS_TO]->(p1)
+    MATCH (p1:Page)-[:LINKS_TO|ALIAS]->(p2:Page)
+    WHERE (p2)-[:LINKS_TO|ALIAS]->(p1)
     RETURN p1.title, p1.url, p2.title, p2.url
     LIMIT $limit
     """
@@ -245,7 +245,7 @@ def get_triangles():
     limit = int(request.args.get("limit", 10))
 
     query = """
-    MATCH (a:Page)-[:LINKS_TO]->(b:Page)-[:LINKS_TO]->(c:Page)-[:LINKS_TO]->(a)
+    MATCH (a:Page)-[:LINKS_TO|ALIAS]->(b:Page)-[:LINKS_TO|ALIAS]->(c:Page)-[:LINKS_TO|ALIAS]->(a)
     RETURN a.title, a.url, b.title, b.url, c.title, c.url
     LIMIT $limit
     """
@@ -271,7 +271,7 @@ def get_neighborhood():
         abort(400, description="Missing 'title' parameter")
 
     query = f"""
-    MATCH (start:Page {{title: $title}})-[:LINKS_TO*1..{hops}]->(neighbor)
+    MATCH (start:Page {{title: $title}})-[:LINKS_TO|ALIAS*1..{hops}]->(neighbor)
     RETURN DISTINCT neighbor.title, neighbor.url
     LIMIT $limit
     """
@@ -287,7 +287,7 @@ def get_database_nosql():
 
     query = """
     MATCH (db:Page)
-    WHERE db.title CONTAINS "database" AND NOT (db)-[:LINKS_TO]->(:Page {title: "SQL"}) AND db.url IS NOT NULL
+    WHERE db.title CONTAINS "database" AND NOT (db)-[:LINKS_TO|ALIAS]->(:Page {title: "SQL"}) AND db.url IS NOT NULL
     RETURN db.title, db.url
     LIMIT $limit
     """
