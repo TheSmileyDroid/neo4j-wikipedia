@@ -71,6 +71,24 @@ def populate_database(driver: Driver, start_pages, max_depth=2):
                 url=page.fullurl,
             )
 
+            if page_title is not page.title:
+                session.run(
+                    "MERGE (p:Page {title: $title}) SET p.summary = $summary, p.url = $url",
+                    title=page_title,
+                    summary=page.summary[0:500],
+                    url=page.fullurl,
+                )
+
+                session.run(
+                    """
+                    MATCH (a:Page {title: $source_title})
+                    MERGE (b:Page {title: $target_title})
+                    MERGE (a)-[:ALIAS]->(b)
+                    """,
+                    source_title=page_title,
+                    target_title=page.title,
+                )
+
             # Process links
             for link in page.links:
                 if link not in visited:
