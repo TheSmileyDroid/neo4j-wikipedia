@@ -3,7 +3,7 @@
 import os
 import time
 import wikipediaapi
-from neo4j import GraphDatabase
+from neo4j import Driver, GraphDatabase
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -23,7 +23,7 @@ def create_constraints(driver):
         session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (p:Page) REQUIRE p.title IS UNIQUE")
     print("Constraint on :Page(title) created.")
 
-def populate_database(driver, start_pages, max_depth=2):
+def populate_database(driver: Driver, start_pages, max_depth=2):
     """
     Crawls Wikipedia from a set of start pages and populates the NEO4J database.
     """
@@ -31,6 +31,21 @@ def populate_database(driver, start_pages, max_depth=2):
 
     queue = [(page, 0) for page in start_pages]
     visited = set()
+
+    with driver.session() as session:
+        print("Checking for already visited nodes in the database...")
+        result = session.run("MATCH (n:Page) WHERE n.url IS NOT NULL RETURN n.title")
+        titles = result.to_df()
+        visited.update(set([title for title in titles["n.title"].unique().tolist()]))
+        print("visited nodes found:", len(visited))
+
+
+    with driver.session() as session:
+        print("Checking for pages with pending visits in the database...")
+        result = session.run("MATCH (n:Page) WHERE n.url IS NULL RETURN n.title")
+        titles = result.to_df()
+        queue.extend([(title,2) for title in titles["n.title"].unique().tolist()])
+        print("pending nodes found:", len(titles))
 
     while queue:
         page_title, depth = queue.pop(0)
