@@ -20,7 +20,7 @@ def create_constraints(driver):
     Ensures the database has the correct constraints for efficient operation.
     """
     with driver.session() as session:
-        session.run("CREATE CONSTRAINT FOR (p:Page) REQUIRE p.title IS UNIQUE")
+        session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (p:Page) REQUIRE p.title IS UNIQUE")
     print("Constraint on :Page(title) created.")
 
 def populate_database(driver, start_pages, max_depth=2):
@@ -84,7 +84,7 @@ if __name__ == "__main__":
         # You can change these starting pages to explore different topics
         start_pages = ["Graph database", "Neo4j", "World Wide Web"]
 
-        populate_database(driver, start_pages, max_depth=3)
+        populate_database(driver, start_pages, max_depth=7)
 
         print("\nPopulation complete!")
 
