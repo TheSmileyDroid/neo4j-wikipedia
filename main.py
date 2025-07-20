@@ -34,7 +34,7 @@ def search_pages():
     q = request.args.get("q", "")
     query = """
     MATCH (p:Page)
-    WHERE p.title CONTAINS $q
+    WHERE lower(p.title) CONTAINS lower($q)
     RETURN p.title as title, p.url as url
     ORDER BY size(p.title) ASC
     LIMIT 10
@@ -75,17 +75,17 @@ def get_graph_data():
     node_ids = set()
     main_node = result["p"]
     if main_node.id not in node_ids:
-        nodes.append({"id": main_node.id, "label": main_node["title"], "group": 1})
+        nodes.append({"id": main_node.id, "label": main_node["title"], "url": main_node["url"], "group": 1})
         node_ids.add(main_node.id)
     for node in result["outgoing_links"]:
         if node and node.id not in node_ids:
-            nodes.append({"id": node.id, "label": node["title"], "group": 2})
+            nodes.append({"id": node.id, "label": node["title"], "url": node["url"], "group": 2})
             node_ids.add(node.id)
         if node:
             edges.append({"from": main_node.id, "to": node.id})
     for node in result["incoming_links"]:
         if node and node.id not in node_ids:
-            nodes.append({"id": node.id, "label": node["title"], "group": 3})
+            nodes.append({"id": node.id, "label": node["title"], "url": node["url"], "group": 3})
             node_ids.add(node.id)
         if node:
             edges.append({"from": node.id, "to": main_node.id})
@@ -287,7 +287,7 @@ def get_database_nosql():
 
     query = """
     MATCH (db:Page)
-    WHERE db.title CONTAINS "database" AND NOT (db)-[:LINKS_TO|ALIAS]->(:Page {title: "SQL"}) AND db.url IS NOT NULL
+    WHERE lower(db.title) CONTAINS "database" AND NOT (db)-[:LINKS_TO|ALIAS]->(:Page {title: "SQL"}) AND db.url IS NOT NULL
     RETURN db.title, db.url
     LIMIT $limit
     """
