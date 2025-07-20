@@ -309,8 +309,8 @@ def execute_custom_query():
         abort(400, description="Only read-only queries are allowed")
 
     try:
-        with driver.session() as session:  # type: ignore
-            result = session.run(cypher)
+        with driver.session() as session:
+            result = session.run(cypher) # type: ignore
             records = []
             for record in result:
                 records.append(dict(record))
