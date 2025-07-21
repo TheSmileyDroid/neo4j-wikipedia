@@ -30,7 +30,7 @@ def get_in_text_internal_links(title: str) -> tuple[str, list[str], str]:
         links (List[str]): títulos de páginas linkadas nos parágrafos
         full_url (str): URL da página
     """
-    for lang in ["pt", "en"]:
+    for lang in ["en", "pt"]:
         print(f"Tentando buscar '{title}' em {lang}.wikipedia.org...")
         try:
             url = f"https://{lang}.wikipedia.org/w/api.php"
@@ -146,7 +146,7 @@ if __name__ == "__main__":
         create_constraints(driver)
 
         start_pages = ["Graph database", "Neo4j", "World Wide Web"]
-        populate_database(driver, start_pages, max_depth=7)
+        populate_database(driver, start_pages, max_depth=20)
 
         print("\nPopulation complete!")
 
