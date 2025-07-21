@@ -221,32 +221,7 @@
         document.getElementById('results').innerHTML = html;
     };
 
-    // Load and show graph
-    async function loadGraph(page) {
-        const nodeLimit = document.getElementById('node-limit').value || 50;
-        const res = await fetch(`/graph?page=${encodeURIComponent(page)}&limit=${nodeLimit}`);
-        if (!res.ok) {
-            alert('Grafo não encontrado para a página: ' + page);
-            return;
-        }
-        const data = await res.json();
-        const container = document.getElementById('graph');
-        const options = {
-            nodes: { shape: 'dot', size: 20, font: { size: 16 } },
-            edges: { arrows: 'to', color: '#888' },
-            groups: {
-                1: { color: { background: '#007bff', border: '#0056b3' } },
-                2: { color: { background: '#28a745', border: '#1e7e34' } },
-                3: { color: { background: '#ffc107', border: '#d39e00' } }
-            },
-            physics: {
-                stabilization: true,
-            },
-        };
-        const network = new vis.Network(container, data, options);
-
-        container.scrollIntoView();
-
+    function loadEvents(network, data) {
         // Add doubleClick event listener to load graph on node double-click
         network.on('doubleClick', function (params) {
             if (params.nodes.length > 0) {
@@ -280,6 +255,36 @@
             }
         });
     }
+
+    // Load and show graph
+    async function loadGraph(page) {
+        const nodeLimit = document.getElementById('node-limit').value || 50;
+        const res = await fetch(`/graph?page=${encodeURIComponent(page)}&limit=${nodeLimit}`);
+        if (!res.ok) {
+            alert('Grafo não encontrado para a página: ' + page);
+            return;
+        }
+        const data = await res.json();
+        const container = document.getElementById('graph');
+        const options = {
+            nodes: { shape: 'dot', size: 20, font: { size: 16 } },
+            edges: { arrows: 'to', color: '#888' },
+            groups: {
+                1: { color: { background: '#007bff', border: '#0056b3' } },
+                2: { color: { background: '#28a745', border: '#1e7e34' } },
+                3: { color: { background: '#ffc107', border: '#d39e00' } }
+            },
+            physics: {
+                stabilization: true,
+            },
+        };
+        const network = new vis.Network(container, data, options);
+
+        container.scrollIntoView();
+
+        // Load events for the network
+        loadEvents(network, data);
+    }
     // Shortest path form
     document.getElementById('shortest-path-form').onsubmit = async function(e) {
         e.preventDefault();
@@ -302,7 +307,12 @@
             },
             physics: { stabilization: true }
         };
-        new vis.Network(container, data, options);
+        const network = new vis.Network(container, data, options);
+
+        container.scrollIntoView();
+
+        // Load events for the network
+        loadEvents(network, data);
     };
 
     // Demo queries functions
